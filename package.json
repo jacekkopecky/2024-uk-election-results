@@ -1,0 +1,15 @@
+{
+  "name": "2024-uk-election-results",
+  "version": "1.0.0",
+  "main": "index.html",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "scripts": {
+    "start": "http-server ."
+  },
+  "keywords": [],
+  "author": "Jacek Kopecky <jacek@jacek.cz>",
+  "license": "ISC",
+  "description": "what-if games with 2024 UK general election results"
+}

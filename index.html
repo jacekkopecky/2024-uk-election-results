@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<title>2024 UK election data "what if"</title>
+<style>
+  #seatsGraph {
+    display: flex;
+    height: 50vh;
+    border: thin dashed red;
+    flex-direction: row;
+    align-items: flex-end;
+    padding: 0.5em;
+    gap: 0.5em;
+  }
+  #seatsGraph * {
+    flex: 1 1 0;
+    border: solid thin black;
+    border-radius: 0.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.5em;
+  }
+  .sliders {
+    text-align: center;
+  }
+</style>
+
+<h1>2024 UK election data "what if"</h1>
+
+<p>Number of constituencies: <span id="numOfConst"></span></p>
+
+<div id="seatsGraph"></div>
+
+<section class="sliders">
+  <p>
+    RUK to Con:
+    <input type="range" data-from="RUK" data-to="Con" />
+  </p>
+  <p>
+    Con to RUK:
+    <input type="range" data-from="Con" data-to="RUK" />
+  </p>
+  <p>
+    RUK not voting:
+    <input type="range" id="rukToNone" data-from="RUK" data-to="None" />
+  </p>
+</section>
+
+<script type="module">
+  import data from './data.js';
+
+  const parties = [
+    'Con',
+    'Lab',
+    'LD',
+    'RUK',
+    'Green',
+    'SNP',
+    'PC',
+    'DUP',
+    'SF',
+    'SDLP',
+    'UUP',
+    'APNI',
+    'OTHWin',
+  ];
+
+  const partiesToShow = ['Con', 'Lab', 'LD', 'SNP', 'RUK'];
+  const partyColors = {
+    Lab: '#d6382580',
+    Con: '#3373c380',
+    LD: '#f19f3980',
+    SNP: '#f8d25380',
+    RUK: '#60cedd80',
+  };
+
+  window.numOfConst.textContent = data.length;
+  showSeats(computeSeats(data, parties));
+
+  // set up the sliders
+  for (const slider of document.querySelectorAll('.sliders input')) {
+    slider.value = 0;
+    slider.min = 0;
+    slider.max = 100;
+    slider.step = 1;
+    slider.addEventListener('input', redraw);
+    slider.addEventListener('input', updateValue);
+
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'value';
+    valueSpan.textContent = '0';
+    slider.parentElement.append(' ', valueSpan, '%');
+  }
+
+  function updateValue(e) {
+    const el = e.target;
+    const valueEl = e.target.parentElement.querySelector('.value');
+    if (valueEl) valueEl.textContent = el.valueAsNumber;
+  }
+
+  function redraw() {
+    let updated = data;
+    for (const slider of document.querySelectorAll('.sliders input')) {
+      const value = slider.valueAsNumber;
+      updated = shiftVotes(updated, slider.dataset.from, slider.dataset.to, value / 100);
+    }
+
+    showSeats(computeSeats(updated, parties));
+  }
+
+  function shiftVotes(data, fromParty, toParty, proportion) {
+    return data.map((constituency) => ({
+      ...constituency,
+      [toParty]: constituency[toParty] + proportion * constituency[fromParty],
+      [fromParty]: constituency[fromParty] * (1 - proportion),
+    }));
+  }
+
+  function showSeats(seats) {
+    window.seatsGraph.textContent = '';
+    const max = data.length; // Math.max(...Object.values(seats));
+    for (const party of partiesToShow) {
+      const div = document.createElement('div');
+      div.style.height = (seats[party] / max) * 100 + '%';
+      div.textContent = party + ': ' + seats[party];
+      div.style.backgroundColor = partyColors[party];
+      window.seatsGraph.append(div);
+    }
+  }
+
+  function computeSeats(data, parties) {
+    const seats = Object.fromEntries(parties.map((p) => [p, 0]));
+
+    for (const constituency of data) {
+      const counts = parties.map((party) => constituency[party]);
+      assert(counts.every((c) => typeof c === 'number'));
+
+      const winner = getWinner(counts, parties);
+      seats[winner] += 1;
+    }
+
+    return seats;
+  }
+
+  function getWinner(counts, parties) {
+    let winner = parties[0];
+    let winningCount = counts[0];
+    for (let i = 1; i < parties.length; i++) {
+      const party = parties[i];
+      const count = counts[i];
+      if (count > winningCount) {
+        winner = party;
+        winningCount = count;
+      }
+    }
+    return winner;
+  }
+
+  function assert(condition) {
+    if (!condition) throw new Error('assertion failed');
+  }
+</script>
