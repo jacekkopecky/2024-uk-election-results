@@ -10,3 +10,4 @@ I made it because I wanted to see what would happen if some RUK voters voted for
 - [ ] make a checkbox list of parties to show (without OTHWin)
 - [ ] add an "other" for parties not shown
 - [ ] make the sliders at the bottom configurable with "from", "to" including "not voting"
+- [.] mobile-friendly
