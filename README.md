@@ -3,6 +3,8 @@
 This little app lets you see what the results of the 2024 UK general election might have been if a
 certain proportion of voters for one party actually voted for another.
 
+See the app at https://jacekkopecky.github.io/2024-uk-election-results/
+
 This app uses data from https://commonslibrary.parliament.uk/research-briefings/cbp-10009/
 
 I made it because I wanted to see what would happen if some RUK voters voted for the Tories instead.
