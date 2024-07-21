@@ -26,6 +26,15 @@
     text-align: center;
     min-height: 1.5em;
   }
+  #sliders input,
+  #sliders .close {
+    margin-left: 1em;
+  }
+  #sliders .value {
+    display: inline-block;
+    min-width: 4ch;
+    text-align: right;
+  }
 </style>
 
 <h1>2024 UK election data "what if"</h1>
@@ -79,8 +88,13 @@
     'APNI',
     'OTHWin',
   ];
+  const partyOptions = parties.filter((party) => party !== 'OTHWin');
 
-  const showingSliders = [{ from: 'RUK', to: 'Con' }, { from: 'RUK' }];
+  const initialSliders = [
+    { from: 'RUK', to: 'Con', value: 0 },
+    { from: 'RUK', value: 0 },
+  ];
+  const showingSliders = [...initialSliders];
 
   makeSliders();
 
@@ -101,34 +115,79 @@
     window.sliders.textContent = '';
 
     for (let i = 0; i < showingSliders.length; i++) {
-      const { from, to } = showingSliders[i];
+      const slider = showingSliders[i];
+      const { from, to, value } = slider;
 
       const p = document.createElement('p');
-      p.append(from);
-      p.append(to ? ' to ' + to : ' not voting');
-
-      const slider = document.createElement('input');
-      slider.type = 'range';
-      slider.dataset.from = from;
-      slider.dataset.to = to || 'no party';
-      slider.value = 0;
-      slider.min = 0;
-      slider.max = 100;
-      slider.step = 1;
-      slider.addEventListener('input', redraw);
-      slider.addEventListener('input', updateValue);
+      p.append(makePartySelector(from, i));
+      p.append(' to ');
+      p.append(makePartySelector(to, i, true));
 
       const valueSpan = document.createElement('span');
       valueSpan.className = 'value';
       valueSpan.textContent = '0';
 
+      const sliderEl = document.createElement('input');
+      sliderEl.type = 'range';
+      sliderEl.dataset.from = from;
+      sliderEl.dataset.to = to || '';
+      sliderEl.value = value;
+      sliderEl.min = 0;
+      sliderEl.max = 100;
+      sliderEl.step = 1;
+      sliderEl.addEventListener('input', () => {
+        slider.value = sliderEl.valueAsNumber;
+        valueSpan.textContent = slider.value;
+      });
+      sliderEl.addEventListener('input', redraw);
+
       const bin = document.createElement('span');
+      bin.className = 'close';
       bin.append('❌');
       bin.addEventListener('click', () => removeSlider(i));
 
-      p.append(' ', slider, ' ', valueSpan, '% ', bin);
+      p.append(' ', sliderEl, ' ', valueSpan, '% ', bin);
       window.sliders.append(p);
     }
+
+    const addButton = document.createElement('button');
+    addButton.textContent = 'add a slider';
+    addButton.addEventListener('click', () => {
+      const lastSlider = showingSliders.at(-1) || initialSliders[0];
+      showingSliders.push({ ...lastSlider, value: 0 });
+      makeSliders();
+    });
+
+    const p = document.createElement('p');
+    p.append(addButton);
+    window.sliders.append(p);
+  }
+
+  function makePartySelector(value, optionIndex, isToOption) {
+    const select = document.createElement('select');
+    for (const party of partyOptions) {
+      const option = document.createElement('option');
+      option.textContent = party;
+      option.value = party;
+      select.append(option);
+    }
+
+    if (isToOption) {
+      const option = document.createElement('option');
+      option.textContent = 'not voting';
+      option.value = '';
+      select.append(option);
+    }
+
+    select.value = value || '';
+
+    select.addEventListener('change', () => {
+      const whichProp = isToOption ? 'to' : 'from';
+      showingSliders[optionIndex][whichProp] = select.value;
+      redraw();
+    });
+
+    return select;
   }
 
   function removeSlider(i) {
@@ -136,28 +195,35 @@
     makeSliders();
   }
 
-  function updateValue(e) {
+  function updateValue(i, e) {
+    const sliders = showingSliders[i];
     const el = e.target;
+    sliders.value = el.valueAsNumber;
+
     const valueEl = e.target.parentElement.querySelector('.value');
-    if (valueEl) valueEl.textContent = el.valueAsNumber;
+    if (valueEl) valueEl.textContent = sliders.value;
   }
 
   function redraw() {
     let updated = data;
-    for (const slider of document.querySelectorAll('#sliders input')) {
-      const value = slider.valueAsNumber;
-      updated = shiftVotes(updated, slider.dataset.from, slider.dataset.to, value / 100);
+    for (const slider of showingSliders) {
+      updated = shiftVotes(updated, slider.from, slider.to, slider.value / 100);
     }
 
     showSeats(computeSeats(updated, parties));
   }
 
   function shiftVotes(data, fromParty, toParty, proportion) {
-    return data.map((constituency) => ({
-      ...constituency,
-      [toParty]: constituency[toParty] + proportion * constituency[fromParty],
-      [fromParty]: constituency[fromParty] * (1 - proportion),
-    }));
+    return data.map((constituency) => {
+      const retval = {
+        ...constituency,
+        [fromParty]: constituency[fromParty] * (1 - proportion),
+      };
+      if (toParty) {
+        retval[toParty] = constituency[toParty] + proportion * constituency[fromParty];
+      }
+      return retval;
+    });
   }
 
   function showSeats(seats) {
