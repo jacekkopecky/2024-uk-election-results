@@ -16,7 +16,7 @@
     padding: 0.5em;
     gap: 0.5em;
   }
-  #seatsGraph * {
+  #seatsGraph > * {
     flex: 1 1 0;
     border: solid thin black;
     border-radius: 0.2em;
@@ -24,7 +24,13 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 1.5em;
+    margin-bottom: 1.5em;
+    position: relative;
+  }
+  #seatsGraph > * > * {
+    position: absolute;
+    top: 100%;
+    margin-top: 0.25em;
   }
   #sliders input,
   #sliders .close {
@@ -34,6 +40,19 @@
     display: inline-block;
     min-width: 4ch;
     text-align: right;
+  }
+  #partiesToShow {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-items: left;
+    margin-left: -0.5em;
+  }
+  #partiesToShow > * {
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0.5em;
   }
 </style>
 
@@ -52,6 +71,8 @@
 
 <div id="seatsGraph"></div>
 <section id="sliders"></section>
+<p>Parties to show:</p>
+<section id="partiesToShow"></section>
 
 <section>
   <h2>Further information</h2>
@@ -96,20 +117,46 @@
   ];
   const showingSliders = [...initialSliders];
 
-  makeSliders();
-
-  const partiesToShow = ['Con', 'Lab', 'LD', 'SNP', 'RUK', 'Other'];
+  const partiesToShow = ['Con', 'Lab', 'LD', 'RUK', 'Green'];
   const partyColors = {
-    Lab: '#d6382580',
-    Con: '#3373c380',
-    LD: '#f19f3980',
-    SNP: '#f8d25380',
-    RUK: '#60cedd80',
-    Other: '#88888880',
+    Lab: '#d63825',
+    Con: '#3373c3',
+    LD: '#f19f39',
+    SNP: '#f8d253',
+    RUK: '#60cedd',
+    Other: '#888888',
+    Green: '#008800',
   };
+
+  makeSliders();
+  makePartiesToShowList();
 
   window.numOfConst.textContent = data.length;
   showSeats(computeSeats(data, parties));
+
+  function makePartiesToShowList() {
+    window.partiesToShow.textContent = '';
+
+    for (const party of partyOptions) {
+      const label = document.createElement('label');
+      window.partiesToShow.append(label);
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = partiesToShow.includes(party);
+
+      checkbox.addEventListener('change', () => {
+        if (partiesToShow.includes(party)) {
+          partiesToShow.splice(partiesToShow.indexOf(party), 1);
+        } else {
+          partiesToShow.push(party);
+        }
+        redraw();
+      });
+
+      label.append(checkbox, ' ', party);
+    }
+  }
 
   function makeSliders() {
     window.sliders.textContent = '';
@@ -125,7 +172,7 @@
 
       const valueSpan = document.createElement('span');
       valueSpan.className = 'value';
-      valueSpan.textContent = '0';
+      valueSpan.textContent = value;
 
       const sliderEl = document.createElement('input');
       sliderEl.type = 'range';
@@ -143,6 +190,7 @@
 
       const bin = document.createElement('span');
       bin.className = 'close';
+      bin.title = 'remove this slider';
       bin.append('❌');
       bin.addEventListener('click', () => removeSlider(i));
 
@@ -231,16 +279,20 @@
     const max = data.length; // Math.max(...Object.values(seats));
 
     // compute seaths by parties not shown
-    seats.Other = 0;
+    let other = 0;
     for (const party of Object.keys(seats)) {
-      if (!partiesToShow.includes(party)) seats.Other += seats[party];
+      if (!partiesToShow.includes(party)) other += seats[party];
     }
 
-    for (const party of partiesToShow) {
+    seats.Other = other;
+
+    for (const party of [...partiesToShow, 'Other']) {
       const div = document.createElement('div');
       div.style.height = (seats[party] / max) * 100 + '%';
-      div.textContent = party + ': ' + seats[party];
       div.style.backgroundColor = partyColors[party];
+      const span = document.createElement('span');
+      span.textContent = party + ': ' + seats[party];
+      div.append(span);
       window.seatsGraph.append(div);
     }
   }
