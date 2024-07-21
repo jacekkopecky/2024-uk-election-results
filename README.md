@@ -9,8 +9,8 @@ I made it because I wanted to see what would happen if some RUK voters voted for
 
 ## todo
 
-- [ ] make a checkbox list of parties to show (without OTHWin)
-- [ ] colors for more parties
+- [x] make a checkbox list of parties to show (without OTHWin)
+- [.] colors for more parties
 - [x] add an "other" for parties not shown
 - [x] make the sliders at the bottom configurable with "from", "to" including "not voting"
 - [.] mobile-friendly
