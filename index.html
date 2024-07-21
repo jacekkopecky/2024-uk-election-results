@@ -5,6 +5,7 @@
   body {
     max-width: 40em;
     margin: auto;
+    padding: 0.5em;
   }
   #seatsGraph {
     display: flex;
@@ -22,10 +23,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 1.5em;
-  }
-  .sliders {
     text-align: center;
+    min-height: 1.5em;
   }
 </style>
 
@@ -43,19 +42,22 @@
 <p>Number of constituencies: <span id="numOfConst"></span></p>
 
 <div id="seatsGraph"></div>
+<section id="sliders"></section>
 
-<section class="sliders">
+<section>
+  <h2>Further information</h2>
+
   <p>
-    RUK to Con:
-    <input type="range" data-from="RUK" data-to="Con" />
+    The data comes
+    <a href="https://commonslibrary.parliament.uk/research-briefings/cbp-10009/"
+      >from the UK Parliament</a
+    >.
   </p>
+
   <p>
-    Con to RUK:
-    <input type="range" data-from="Con" data-to="RUK" />
-  </p>
-  <p>
-    RUK not voting:
-    <input type="range" id="rukToNone" data-from="RUK" data-to="None" />
+    The sliders apply one after the other, so if one slider assigns 20% Labour votes to Tories, and
+    the next assigns 10% Labour votes to Lib Dems, then Lib Dems would get 8% of the original Labour
+    votes because after the first slider, only 80% of the votes were available to be shifted.
   </p>
 </section>
 
@@ -78,31 +80,60 @@
     'OTHWin',
   ];
 
-  const partiesToShow = ['Con', 'Lab', 'LD', 'SNP', 'RUK'];
+  const showingSliders = [{ from: 'RUK', to: 'Con' }, { from: 'RUK' }];
+
+  makeSliders();
+
+  const partiesToShow = ['Con', 'Lab', 'LD', 'SNP', 'RUK', 'Other'];
   const partyColors = {
     Lab: '#d6382580',
     Con: '#3373c380',
     LD: '#f19f3980',
     SNP: '#f8d25380',
     RUK: '#60cedd80',
+    Other: '#88888880',
   };
 
   window.numOfConst.textContent = data.length;
   showSeats(computeSeats(data, parties));
 
-  // set up the sliders
-  for (const slider of document.querySelectorAll('.sliders input')) {
-    slider.value = 0;
-    slider.min = 0;
-    slider.max = 100;
-    slider.step = 1;
-    slider.addEventListener('input', redraw);
-    slider.addEventListener('input', updateValue);
+  function makeSliders() {
+    window.sliders.textContent = '';
 
-    const valueSpan = document.createElement('span');
-    valueSpan.className = 'value';
-    valueSpan.textContent = '0';
-    slider.parentElement.append(' ', valueSpan, '%');
+    for (let i = 0; i < showingSliders.length; i++) {
+      const { from, to } = showingSliders[i];
+
+      const p = document.createElement('p');
+      p.append(from);
+      p.append(to ? ' to ' + to : ' not voting');
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.dataset.from = from;
+      slider.dataset.to = to || 'no party';
+      slider.value = 0;
+      slider.min = 0;
+      slider.max = 100;
+      slider.step = 1;
+      slider.addEventListener('input', redraw);
+      slider.addEventListener('input', updateValue);
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'value';
+      valueSpan.textContent = '0';
+
+      const bin = document.createElement('span');
+      bin.append('❌');
+      bin.addEventListener('click', () => removeSlider(i));
+
+      p.append(' ', slider, ' ', valueSpan, '% ', bin);
+      window.sliders.append(p);
+    }
+  }
+
+  function removeSlider(i) {
+    showingSliders.splice(i, 1);
+    makeSliders();
   }
 
   function updateValue(e) {
@@ -113,7 +144,7 @@
 
   function redraw() {
     let updated = data;
-    for (const slider of document.querySelectorAll('.sliders input')) {
+    for (const slider of document.querySelectorAll('#sliders input')) {
       const value = slider.valueAsNumber;
       updated = shiftVotes(updated, slider.dataset.from, slider.dataset.to, value / 100);
     }
@@ -132,6 +163,13 @@
   function showSeats(seats) {
     window.seatsGraph.textContent = '';
     const max = data.length; // Math.max(...Object.values(seats));
+
+    // compute seaths by parties not shown
+    seats.Other = 0;
+    for (const party of Object.keys(seats)) {
+      if (!partiesToShow.includes(party)) seats.Other += seats[party];
+    }
+
     for (const party of partiesToShow) {
       const div = document.createElement('div');
       div.style.height = (seats[party] / max) * 100 + '%';
